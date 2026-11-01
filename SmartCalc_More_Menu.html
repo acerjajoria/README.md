@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartCalc — All-in-One Calculator</title>
+<style>
+:root{--bg:#f3f6fb;--card:#fff;--text:#172033;--muted:#68758b;--accent:#5267e8;--line:#e4e9f2;--good:#087f5b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Arial,sans-serif}
+body.dark{--bg:#111827;--card:#1f2937;--text:#f3f4f6;--muted:#aab4c5;--accent:#91a0ff;--line:#374151;--good:#6ee7b7}
+header{padding:22px max(18px,calc((100% - 1100px)/2));background:var(--card);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}
+h1{font-size:23px;margin:0}header p{margin:2px 0 0;color:var(--muted);font-size:13px}
+button,.btn{border:0;border-radius:10px;padding:10px 14px;background:var(--accent);color:white;cursor:pointer;font-weight:600}
+button.secondary{background:var(--bg);color:var(--text);border:1px solid var(--line)}
+button:hover{filter:brightness(.96)}main{max-width:1100px;margin:22px auto;padding:0 16px}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+nav button{background:var(--card);color:var(--muted);border:1px solid var(--line)}
+nav button.active{background:var(--accent);color:white;border-color:var(--accent)}
+.panel{display:none;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 5px 22px #15213b0a}
+.panel.active{display:block}h2{margin:0 0 14px;font-size:20px}h3{font-size:15px;margin:18px 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+label{display:block;color:var(--muted);font-size:13px;margin-bottom:5px}
+input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);font:inherit}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.result{margin-top:14px;padding:13px;background:var(--bg);border:1px solid var(--line);border-radius:10px;min-height:44px;overflow-wrap:anywhere}
+.calc{max-width:520px}.screen{width:100%;font-size:25px;text-align:right;margin-bottom:10px}
+.keys{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.keys button{padding:14px 5px;font-size:16px;background:var(--bg);color:var(--text);border:1px solid var(--line)}.keys button.equals{background:var(--accent);color:#fff}
+small,.muted{color:var(--muted)}.history{padding-left:20px}.history li{margin:5px 0;cursor:pointer}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:25px}
+@media(max-width:600px){header{align-items:flex-start}.panel{padding:14px}.keys{gap:5px}.keys button{padding:12px 2px}}
+
+/* MORE command launcher */
+#moreDock{position:fixed;top:12px;left:12px;z-index:10000;font-family:Arial,sans-serif}
+#moreBtn{background:#273bba;color:#fff;border:0;border-radius:11px;padding:11px 18px;box-shadow:0 5px 18px #10182830;font-size:15px}
+#morePanel{display:none;position:absolute;top:48px;left:0;width:min(370px,calc(100vw - 24px));max-height: min(72vh,620px);overflow:hidden;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:15px;box-shadow:0 14px 45px #10182835;padding:13px}
+#morePanel.open{display:block}
+#moreSearch{margin:0 0 9px;font-size:15px}
+#moreHint{font-size:12px;color:var(--muted);margin:0 0 8px}
+#moreResults{overflow:auto;max-height:calc(min(72vh,620px) - 100px);display:grid;gap:5px}
+.moreItem{width:100%;text-align:left;background:var(--bg);color:var(--text);border:1px solid var(--line);padding:9px 10px;border-radius:9px;display:flex;justify-content:space-between;gap:10px}
+.moreItem small{white-space:nowrap}.moreItem:hover{border-color:var(--accent);background:var(--card)}
+@media(max-width:600px){#moreDock{top:8px;left:8px}#moreBtn{padding:9px 13px}header{padding-left:95px}}
+
+</style>
+</head>
+<body>
+
+<div id="moreDock">
+  <button id="moreBtn" type="button" aria-expanded="false" aria-controls="morePanel">☰ More</button>
+  <div id="morePanel" role="dialog" aria-label="Find calculator functions">
+    <input id="moreSearch" type="search" placeholder="Type a function… e.g. HCF, km to m, GST" autocomplete="off">
+    <p id="moreHint">Search any tool, then click a result to open it.</p>
+    <div id="moreResults"></div>
+  </div>
+</div>
+
+<header><div><h1>⚡ SmartCalc</h1><p>Your all-in-one calculator and student productivity toolkit</p></div><button class="secondary" id="themeBtn">🌙 Theme</button></header>
+<main>
+<nav id="tabs">
+<button class="active" data-tab="standard">Calculator</button><button data-tab="math">Math Tools</button>
+<button data-tab="units">Unit Converter</button><button data-tab="date">Time & Date</button>
+<button data-tab="finance">Finance</button><button data-tab="student">Student Tools</button>
+<button data-tab="smart">Number Tools</button>
+</nav>
+<section class="panel active" id="standard"><h2>Standard & Scientific Calculator</h2>
+<div class="calc"><input id="display" class="screen" placeholder="0" aria-label="Calculator display">
+<div class="keys" id="keys">
+<button data-v="sin(">sin</button><button data-v="cos(">cos</button><button data-v="tan(">tan</button><button data-v="sqrt(">√</button><button data-v="^">xʸ</button>
+<button data-v="(">(</button><button data-v=")">)</button><button data-v="π">π</button><button data-v="log(">log</button><button data-v="ln(">ln</button>
+<button data-v="7">7</button><button data-v="8">8</button><button data-v="9">9</button><button data-v="/">÷</button><button data-v="AC">AC</button>
+<button data-v="4">4</button><button data-v="5">5</button><button data-v="6">6</button><button data-v="*">×</button><button data-v="DEL">DEL</button>
+<button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="-">−</button><button data-v="%">%</button>
+<button data-v="0">0</button><button data-v=".">.</button><button data-v="Ans">Ans</button><button data-v="+">+</button><button class="equals" data-v="=">=</button>
+</div>
+<div class="actions"><button class="secondary" id="copy">Copy result</button><button class="secondary" id="memAdd">M+</button><button class="secondary" id="memRecall">MR</button><button class="secondary" id="memClear">MC</button></div>
+<div class="result" id="calcResult">Result appears here.</div><h3>Calculation history</h3><ol class="history" id="history"></ol></div>
+</section>
+<section class="panel" id="math"><h2>Math Tools</h2><div class="grid">
+<div><label>First number</label><input id="mA" type="number" value="24"></div><div><label>Second number</label><input id="mB" type="number" value="36"></div>
+</div><div class="actions"><button onclick="mathTool('hcf')">HCF</button><button onclick="mathTool('lcm')">LCM</button><button onclick="mathTool('prime')">Check first number</button><button onclick="mathTool('factors')">Find factors</button><button onclick="mathTool('table')">Multiplication table</button><button onclick="mathTool('average')">Average</button><button onclick="mathTool('ratio')">Simplify ratio</button><button onclick="mathTool('fraction')">Simplify fraction</button></div>
+<div class="result" id="mathOut">Choose a maths tool.</div><p class="muted">For fraction simplification, enter numerator in First number and denominator in Second number.</p></section>
+<section class="panel" id="units"><h2>Unit Converter</h2><div class="grid"><div><label>Category</label><select id="unitCat" onchange="unitOptions()"><option value="length">Length</option><option value="mass">Mass / Weight</option><option value="time">Time</option><option value="area">Area</option><option value="volume">Volume</option><option value="speed">Speed</option><option value="data">Digital storage</option><option value="temp">Temperature</option></select></div>
+<div><label>Value</label><input id="unitVal" type="number" value="1"></div><div><label>From</label><select id="unitFrom"></select></div><div><label>To</label><select id="unitTo"></select></div></div><div class="actions"><button onclick="convertUnit()">Convert</button></div><div class="result" id="unitOut"></div></section>
+<section class="panel" id="date"><h2>Time & Date Tools</h2><div class="grid">
+<div><label>Date of birth</label><input type="date" id="dob"></div><div><label>Target date</label><input type="date" id="targetDate"></div>
+<div><label>Start date</label><input type="date" id="dateA"></div><div><label>End date</label><input type="date" id="dateB"></div>
+<div><label>Start time</label><input type="time" id="timeA" value="09:00"></div><div><label>End time</label><input type="time" id="timeB" value="17:30"></div>
+</div><div class="actions"><button onclick="ageCalc()">Calculate age</button><button onclick="dateDiff()">Days between dates</button><button onclick="timeDiff()">Time duration</button></div><div class="result" id="dateOut"></div>
+<h3>Countdown timer</h3><div class="grid"><div><label>Minutes</label><input id="timerMin" type="number" min="0" value="5"></div><div><label>Seconds</label><input id="timerSec" type="number" min="0" max="59" value="0"></div></div><div class="actions"><button onclick="startTimer()">Start</button><button class="secondary" onclick="stopTimer()">Stop / Reset</button></div><div class="result" id="timerOut">Ready</div>
+</section>
+<section class="panel" id="finance"><h2>Finance Calculator</h2><div class="grid">
+<div><label>Principal / Price (₹)</label><input id="principal" type="number" value="10000"></div><div><label>Annual interest rate (%)</label><input id="rate" type="number" value="8"></div><div><label>Time (years)</label><input id="years" type="number" value="2"></div><div><label>Discount / GST (%)</label><input id="percent" type="number" value="18"></div><div><label>Cost price (₹)</label><input id="cost" type="number" value="500"></div><div><label>Selling price (₹)</label><input id="sell" type="number" value="650"></div><div><label>Loan amount (₹)</label><input id="loan" type="number" value="500000"></div><div><label>EMI interest rate (annual %)</label><input id="emiRate" type="number" value="9"></div><div><label>Loan period (months)</label><input id="months" type="number" value="60"></div>
+</div><div class="actions"><button onclick="finance('simple')">Simple interest</button><button onclick="finance('compound')">Compound interest</button><button onclick="finance('discount')">Discount price</button><button onclick="finance('gst')">Add GST</button><button onclick="finance('profit')">Profit / Loss</button><button onclick="finance('emi')">Calculate EMI</button></div><div class="result" id="financeOut"></div></section>
+<section class="panel" id="student"><h2>Student Productivity Tools</h2><div class="grid">
+<div><label>Marks obtained</label><input id="marks" type="number" value="420"></div><div><label>Total marks</label><input id="totalMarks" type="number" value="500"></div><div><label>Classes attended</label><input id="attended" type="number" value="42"></div><div><label>Total classes</label><input id="classes" type="number" value="50"></div><div><label>Study hours</label><input id="studyHours" type="number" value="2"></div><div><label>Study minutes</label><input id="studyMins" type="number" value="30"></div><div><label>Target percentage</label><input id="targetPct" type="number" value="80"></div></div>
+<div class="actions"><button onclick="student('marks')">Marks percentage & grade</button><button onclick="student('attendance')">Attendance percentage</button><button onclick="student('study')">Study time</button><button onclick="student('target')">Marks needed for target</button><button onclick="student('random')">Random number (1–100)</button></div><div class="result" id="studentOut"></div></section>
+<section class="panel" id="smart"><h2>Smart Number Tools</h2><div class="grid">
+<div><label>Number</label><input id="smartNum" type="number" value="255"></div><div><label>Text / numeral input</label><input id="smartText" value="2026"></div></div>
+<div class="actions"><button onclick="numberWords()">Number to words</button><button onclick="toRoman()">To Roman numerals</button><button onclick="fromRoman()">Roman to number</button><button onclick="baseConvert(2)">To binary</button><button onclick="baseConvert(8)">To octal</button><button onclick="baseConvert(16)">To hexadecimal</button><button onclick="baseBack()">Convert from base</button><button onclick="makePassword()">Create safe random password</button></div>
+<div class="grid" style="margin-top:12px"><div><label>Convert from base (2, 8, 10, 16)</label><select id="baseFrom"><option>2</option><option>8</option><option>10</option><option>16</option></select></div></div>
+<div class="result" id="smartOut"></div></section>
+</main><footer>SmartCalc • Calculations are performed in your browser. Check important financial or academic results independently.</footer>
+<script>
+const $=id=>document.getElementById(id);let lastAns=0,memory=0,timerId=null;
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.tab).classList.add('active')});
+$('themeBtn').onclick=()=>{document.body.classList.toggle('dark');$('themeBtn').textContent=document.body.classList.contains('dark')?'☀️ Theme':'🌙 Theme'};
+$('keys').onclick=e=>{let v=e.target.dataset.v;if(!v)return;let d=$('display');if(v==='AC')d.value='';else if(v==='DEL')d.value=d.value.slice(0,-1);else if(v==='=')calculate();else d.value+=v};
+function safeEval(s){if(!/^[0-9+\-*/().,%\sπA-Za-z^]+$/.test(s))throw Error('Invalid expression');s=s.replace(/π/g,'Math.PI').replace(/\bAns\b/g,String(lastAns)).replace(/\^/g,'**').replace(/sqrt\(/g,'Math.sqrt(').replace(/sin\(/g,'Math.sin(').replace(/cos\(/g,'Math.cos(').replace(/tan\(/g,'Math.tan(').replace(/log\(/g,'Math.log10(').replace(/ln\(/g,'Math.log(').replace(/(\d+(?:\.\d+)?)%/g,'($1/100)');return Function('"use strict";return ('+s+')')()}
+function calculate(){try{let expression=$('display').value;let result=safeEval(expression);if(!Number.isFinite(result))throw Error('Cannot calculate');lastAns=result;$('calcResult').textContent='= '+result;let li=document.createElement('li');li.textContent=expression+' = '+result;li.dataset.expr=expression;li.addEventListener('click',()=>{$('display').value=li.dataset.expr});$('history').prepend(li)}catch(e){$('calcResult').textContent='Error: '+e.message}}
+$('display').addEventListener('keydown',e=>{if(e.key==='Enter')calculate()});
+$('copy').onclick=()=>navigator.clipboard?.writeText(String(lastAns));$('memAdd').onclick=()=>memory+=lastAns;$('memRecall').onclick=()=>$('display').value+=memory;$('memClear').onclick=()=>memory=0;
+function gcd(a,b){a=Math.abs(Math.trunc(a));b=Math.abs(Math.trunc(b));while(b)[a,b]=[b,a%b];return a}
+function mathTool(t){let a=Number($('mA').value),b=Number($('mB').value),o='';if(!Number.isFinite(a)||!Number.isFinite(b)){o='Enter valid numbers.'}else if(t==='hcf')o='HCF = '+gcd(a,b);else if(t==='lcm')o='LCM = '+(a&&b?Math.abs(a*b)/gcd(a,b):0);else if(t==='prime'){let n=Math.trunc(a),p=n>1;for(let i=2;i<=Math.sqrt(n);i++)if(n%i===0)p=false;o=n+' is '+(p?'a prime number.':'not a prime number.')}else if(t==='factors'){let n=Math.abs(Math.trunc(a));o=n>0?Array.from({length:n},(_,i)=>i+1).filter(x=>n%x===0).join(', '):'Enter a non-zero integer.'}else if(t==='table')o=Array.from({length:10},(_,i)=>`${a} × ${i+1} = ${a*(i+1)}`).join('<br>');else if(t==='average')o='Average = '+((a+b)/2);else if(t==='ratio'){let g=gcd(a,b);o='Simplified ratio = '+(g?`${a/g} : ${b/g}`:'Cannot simplify')}else if(t==='fraction'){let g=gcd(a,b);o=g?`Simplified fraction = ${a/g}/${b/g}`:'Invalid fraction'}$('mathOut').innerHTML=o}
+const units={length:{mm:.001,cm:.01,m:1,km:1000,in:0.0254,ft:.3048,mi:1609.344},mass:{mg:.000001,g:.001,kg:1,tonne:1000,lb:.453592,oz:.0283495},time:{second:1,minute:60,hour:3600,day:86400,week:604800},area:{'cm²':.0001,'m²':1,'km²':1e6,hectare:10000,acre:4046.856},volume:{ml:.001,litre:1,'m³':1000,gallon:3.78541},speed:{'m/s':1,'km/h':1/3.6,mph:.44704},data:{byte:1,KB:1024,MB:1048576,GB:1073741824,TB:1099511627776},temp:{'°C':1,'°F':1,'K':1}};
+function unitOptions(){let c=$('unitCat').value,opts=Object.keys(units[c]);$('unitFrom').innerHTML=$('unitTo').innerHTML=opts.map(x=>`<option>${x}</option>`).join('');if(c==='length'){$('unitFrom').value='m';$('unitTo').value='km'}if(c==='mass'){$('unitFrom').value='kg';$('unitTo').value='g'}}
+function convertUnit(){let c=$('unitCat').value,v=Number($('unitVal').value),f=$('unitFrom').value,t=$('unitTo').value,r;if(c==='temp'){let C=f==='°C'?v:f==='°F'?(v-32)*5/9:v-273.15;r=t==='°C'?C:t==='°F'?C*9/5+32:C+273.15}else r=v*units[c][f]/units[c][t];$('unitOut').textContent=`${v} ${f} = ${Number(r.toPrecision(10))} ${t}`}
+unitOptions();
+function ageCalc(){let d=new Date($('dob').value),now=new Date();if(isNaN(d))return $('dateOut').textContent='Choose your date of birth.';let y=now.getFullYear()-d.getFullYear(),m=now.getMonth()-d.getMonth(),day=now.getDate()-d.getDate();if(day<0)m--;if(m<0){y--;m+=12} $('dateOut').textContent=`Age: ${y} years and ${m} months.`}
+function dateDiff(){let a=new Date($('dateA').value),b=new Date($('dateB').value);if(isNaN(a)||isNaN(b))return $('dateOut').textContent='Choose both dates.';$('dateOut').textContent='Difference: '+Math.abs(Math.round((b-a)/86400000))+' days.'}
+function timeDiff(){let a=$('timeA').value.split(':').map(Number),b=$('timeB').value.split(':').map(Number);let mins=Math.abs((b[0]*60+b[1])-(a[0]*60+a[1]));$('dateOut').textContent=`Duration: ${Math.floor(mins/60)} hours and ${mins%60} minutes.`}
+function startTimer(){stopTimer();let n=Math.max(0,Number($('timerMin').value)*60+Number($('timerSec').value));const tick=()=>{$('timerOut').textContent=`${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}`;if(n<=0){clearInterval(timerId);timerId=null;$('timerOut').textContent='Time is up!';return}n--};tick();timerId=setInterval(tick,1000)}
+function stopTimer(){if(timerId)clearInterval(timerId);timerId=null;$('timerOut').textContent='Stopped / Ready'}
+function finance(t){let p=+$('principal').value,r=+$('rate').value/100,y=+$('years').value,x=+$('percent').value/100,o='';if(t==='simple'){let i=p*r*y;o=`Simple interest: ₹${i.toFixed(2)}<br>Total amount: ₹${(p+i).toFixed(2)}`}if(t==='compound'){let amt=p*Math.pow(1+r,y);o=`Compound interest: ₹${(amt-p).toFixed(2)}<br>Total amount: ₹${amt.toFixed(2)}`}if(t==='discount'){let price=p*(1-x);o=`Discount: ₹${(p*x).toFixed(2)}<br>Price after discount: ₹${price.toFixed(2)}`}if(t==='gst'){o=`GST amount: ₹${(p*x).toFixed(2)}<br>Total including GST: ₹${(p*(1+x)).toFixed(2)}`}if(t==='profit'){let c=+$('cost').value,s=+$('sell').value;o=s>=c?`Profit: ₹${(s-c).toFixed(2)} (${((s-c)/c*100).toFixed(2)}%)`:`Loss: ₹${(c-s).toFixed(2)} (${((c-s)/c*100).toFixed(2)}%)`}if(t==='emi'){let loan=+$('loan').value,rate=+$('emiRate').value/1200,n=+$('months').value,emi=rate?loan*rate*Math.pow(1+rate,n)/(Math.pow(1+rate,n)-1):loan/n;o=`Monthly EMI: ₹${emi.toFixed(2)}<br>Total payment: ₹${(emi*n).toFixed(2)}<br>Total interest: ₹${(emi*n-loan).toFixed(2)}`}$('financeOut').innerHTML=o}
+function student(t){let m=+$('marks').value,total=+$('totalMarks').value,o='';if(t==='marks'){let p=m/total*100,grade=p>=90?'A+':p>=80?'A':p>=70?'B':p>=60?'C':p>=40?'D':'Needs improvement';o=`Percentage: ${p.toFixed(2)}%<br>Grade: ${grade}`}if(t==='attendance'){o=`Attendance: ${(+$('attended').value/+$('classes').value*100).toFixed(2)}%`}if(t==='study'){o=`Total study time: ${+$('studyHours').value*60+(+$('studyMins').value)} minutes.`}if(t==='target'){let need=Math.ceil(+$('targetPct').value/100*total-m);o=need>0?`You need ${need} more marks out of the remaining marks entered.`:'You have already reached the target percentage.'}if(t==='random')o='Random number: '+(Math.floor(Math.random()*100)+1);$('studentOut').textContent=o}
+function numberWords(){let n=Number($('smartNum').value);if(!Number.isSafeInteger(n)||Math.abs(n)>999999999)return $('smartOut').textContent='Enter a whole number between -999,999,999 and 999,999,999.';let small=['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'],tens=['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];function under(x){if(x<20)return small[x];if(x<100)return tens[Math.floor(x/10)]+(x%10?'-'+small[x%10]:'');if(x<1000)return small[Math.floor(x/100)]+' hundred'+(x%100?' '+under(x%100):'');return small[Math.floor(x/1000)]+' thousand'+(x%1000?' '+under(x%1000):'')}let a=Math.abs(n),s=a>=1000000?under(Math.floor(a/1000000))+' million'+(a%1000000?' '+under(a%1000000):''):a>=1000?under(Math.floor(a/1000))+' thousand'+(a%1000?' '+under(a%1000):''):under(a);$('smartOut').textContent=(n<0?'minus ':'')+s}
+function toRoman(){let n=Math.trunc(+$('smartNum').value);if(n<1||n>3999)return $('smartOut').textContent='Enter a number from 1 to 3999.';let vals=[[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']],s='';for(let [v,c] of vals)while(n>=v){s+=c;n-=v}$('smartOut').textContent=s}
+function fromRoman(){let s=$('smartText').value.toUpperCase(),map={I:1,V:5,X:10,L:50,C:100,D:500,M:1000},n=0;for(let i=0;i<s.length;i++)n+=map[s[i]]*(map[s[i]]<(map[s[i+1]]||0)?-1:1);$('smartOut').textContent=Object.keys(map).some(k=>s.includes(k))?`Value: ${n}`:'Enter a Roman numeral.'}
+function baseConvert(base){let n=BigInt(Math.trunc(+$('smartNum').value));$('smartOut').textContent=`${n} in base ${base} = ${n.toString(base).toUpperCase()}`}
+function baseBack(){try{let b=+$('baseFrom').value,n=parseInt($('smartText').value,b);if(!Number.isFinite(n))throw 0;$('smartOut').textContent=`Decimal value = ${n}`}catch(e){$('smartOut').textContent='Invalid number for selected base.'}}
+function makePassword(){let chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*';let a=new Uint32Array(16);crypto.getRandomValues(a);$('smartOut').textContent='Generated password: '+Array.from(a,x=>chars[x%chars.length]).join('')}
+
+// Searchable MORE menu: lists the calculator's functions as you type.
+const moreTools = [
+ ['Standard calculator','Calculator','standard'],['Scientific calculator','sin, cos, tan, square root, powers, log, ln','standard'],
+ ['HCF / GCD','Highest common factor','math','hcf'],['LCM','Least common multiple','math','lcm'],['Prime number checker','Check whether a number is prime','math','prime'],['Find factors','List factors of a number','math','factors'],['Multiplication table','Table from 1 to 10','math','table'],['Average','Average of two numbers','math','average'],['Simplify ratio','Reduce a ratio','math','ratio'],['Simplify fraction','Reduce a fraction','math','fraction'],
+ ['Unit converter','Length, mass, time, area, volume, speed, data, temperature','units'],['Length conversion','mm, cm, m, km, inch, feet, miles','units','length'],['Mass conversion','mg, g, kg, tonne, lb, oz','units','mass'],['Time conversion','seconds, minutes, hours, days, weeks','units','time'],['Temperature conversion','Celsius, Fahrenheit, Kelvin','units','temp'],
+ ['Calculate age','Age in years and months','date','age'],['Days between dates','Date difference','date','days'],['Time duration','Hours and minutes between times','date','duration'],['Countdown timer','Start a minutes and seconds timer','date','timer'],
+ ['Simple interest','Calculate simple interest','finance','simple'],['Compound interest','Calculate compound interest','finance','compound'],['Discount calculator','Find discount and final price','finance','discount'],['GST calculator','Add GST to a price','finance','gst'],['Profit or loss','Compare cost price and selling price','finance','profit'],['EMI calculator','Calculate monthly loan EMI','finance','emi'],
+ ['Marks percentage','Percentage and grade','student','marks'],['Attendance percentage','Calculate attendance','student','attendance'],['Study time calculator','Add study hours and minutes','student','study'],['Target marks','Find marks needed for target percentage','student','target'],['Random number','Generate a number','student','random'],
+ ['Number to words','Write a number in English words','smart','words'],['Roman numeral converter','Decimal to Roman numeral','smart','roman'],['Roman to number','Roman numeral to decimal','smart','fromroman'],['Binary converter','Decimal to binary','smart','bin'],['Octal converter','Decimal to octal','smart','oct'],['Hexadecimal converter','Decimal to hexadecimal','smart','hex'],['Base converter','Convert from binary, octal, decimal or hexadecimal','smart','base'],['Password generator','Generate a random password','smart','password']
+];
+const moreBtn=document.getElementById('moreBtn'),morePanel=document.getElementById('morePanel'),moreSearch=document.getElementById('moreSearch'),moreResults=document.getElementById('moreResults');
+function showMoreResults(q=''){
+ const term=q.trim().toLowerCase(); const matches=moreTools.filter(x=>(x[0]+' '+x[1]).toLowerCase().includes(term));
+ moreResults.innerHTML='';
+ if(!matches.length){moreResults.textContent='No matching function. Try another word.';return;}
+ matches.forEach(item=>{const b=document.createElement('button');b.type='button';b.className='moreItem';const name=document.createElement('span');name.textContent=item[0];const detail=document.createElement('small');detail.textContent=item[1];b.append(name,detail);b.addEventListener('click',()=>runMoreTool(item));moreResults.appendChild(b);});
+}
+function openTab(id){document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.tab===id));document.querySelectorAll('.panel').forEach(x=>x.classList.toggle('active',x.id===id));}
+function runMoreTool(item){const [name,desc,tab,action]=item;openTab(tab);
+ if(tab==='math'&&action){const map={hcf:'hcf',lcm:'lcm',prime:'prime',factors:'factors',table:'table',average:'average',ratio:'ratio',fraction:'fraction'};mathTool(map[action]);}
+ if(tab==='units'&&action){$('unitCat').value=action;unitOptions();}
+ if(tab==='date'&&action==='age')ageCalc();if(tab==='date'&&action==='days')dateDiff();if(tab==='date'&&action==='duration')timeDiff();if(tab==='date'&&action==='timer')$('timerMin').focus();
+ if(tab==='finance'&&action)finance(action);
+ if(tab==='student'&&action)student(action);
+ if(tab==='smart'&&action){if(action==='words')numberWords();if(action==='roman')toRoman();if(action==='fromroman')fromRoman();if(action==='bin')baseConvert(2);if(action==='oct')baseConvert(8);if(action==='hex')baseConvert(16);if(action==='base')baseBack();if(action==='password')makePassword();}
+ if(tab==='standard'){$('display').focus();if(name==='Scientific calculator')$('display').value='';}
+ morePanel.classList.remove('open');moreBtn.setAttribute('aria-expanded','false');
+}
+moreBtn.addEventListener('click',()=>{const isOpen=morePanel.classList.toggle('open');moreBtn.setAttribute('aria-expanded',String(isOpen));if(isOpen){showMoreResults(moreSearch.value);moreSearch.focus();}});
+moreSearch.addEventListener('input',()=>showMoreResults(moreSearch.value));
+document.addEventListener('click',e=>{if(!document.getElementById('moreDock').contains(e.target)){morePanel.classList.remove('open');moreBtn.setAttribute('aria-expanded','false');}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){morePanel.classList.remove('open');moreBtn.setAttribute('aria-expanded','false');}});
+showMoreResults();
+
+</script></body></html>
